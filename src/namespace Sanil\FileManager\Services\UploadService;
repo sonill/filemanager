@@ -1,0 +1,33 @@
+<?php
+
+namespace Sanil\FileManager\Services;
+
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Sanil\FileManager\Models\Upload;
+
+class UploadService {
+    public function uploadFile($file, ?string $collection = 'default', string $disk_name = 'public'): Upload|false {
+        $uuid = str_replace('-', '', Str::uuid()->toString());
+        $upload_dir_path = 'uploads/' . $uuid;
+
+        $extension = $file->getClientOriginalExtension();
+        $filename = "full.$extension";
+
+        Storage::disk($disk_name)->makeDirectory($upload_dir_path);
+
+        $full_relative_path = "$upload_dir_path/$filename";
+
+        Storage::disk($disk_name)->putFileAs($upload_dir_path, $file, $filename);
+
+        // Create Upload record
+        return Upload::create([
+            'upload_path' => $upload_dir_path,
+            'mime_type' => $file->getClientMimeType(),
+            'ext' => $extension,
+            'disk' => $disk_name,
+            'size' => round($file->getSize() / 1024, 2), // in KB
+            'collection' => $collection,
+        ]);
+    }
+}
